@@ -1,0 +1,6 @@
+*.iml
+.idea
+/annotations-publish-healthchecker*
+vendor/*/
+.project
+.vscode
