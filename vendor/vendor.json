@@ -76,14 +76,12 @@
 		},
 		{
 			"checksumSHA1": "5+eS1Ticg5wkpsdNoPiST3OQcIg=",
-			"origin": "github.com/Financial-Times/go-logger/vendor/github.com/sirupsen/logrus",
 			"path": "github.com/sirupsen/logrus",
 			"revision": "ec38b420999cfcbc86816afb47f365dad510450c",
 			"revisionTime": "2017-10-20T13:42:12Z"
 		},
 		{
 			"checksumSHA1": "nqWNlnMmVpt628zzvyo6Yv2CX5Q=",
-			"origin": "github.com/Financial-Times/go-logger/vendor/golang.org/x/crypto/ssh/terminal",
 			"path": "golang.org/x/crypto/ssh/terminal",
 			"revision": "ec38b420999cfcbc86816afb47f365dad510450c",
 			"revisionTime": "2017-10-20T13:42:12Z"
@@ -96,14 +94,12 @@
 		},
 		{
 			"checksumSHA1": "NCjxmUUgENsdpvPnlk5rBOcSHHU=",
-			"origin": "github.com/Financial-Times/go-logger/vendor/golang.org/x/sys/unix",
 			"path": "golang.org/x/sys/unix",
 			"revision": "ec38b420999cfcbc86816afb47f365dad510450c",
 			"revisionTime": "2017-10-20T13:42:12Z"
 		},
 		{
 			"checksumSHA1": "gVfCD++7aVcdKF2spv6XkEM/wYw=",
-			"origin": "github.com/Financial-Times/go-logger/vendor/golang.org/x/sys/windows",
 			"path": "golang.org/x/sys/windows",
 			"revision": "ec38b420999cfcbc86816afb47f365dad510450c",
 			"revisionTime": "2017-10-20T13:42:12Z"
