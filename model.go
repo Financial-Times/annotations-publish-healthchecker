@@ -1,6 +1,6 @@
 package main
 
-type txCache struct {
+type healthStatus struct {
 	OpenTransactions []transaction `json:"failed_transactions"`
 	CheckingPeriod   string        `json:"event_reader_checking_period"`
 	LastTimeCheck    string        `json:"event_reader_checking_time"`

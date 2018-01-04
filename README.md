@@ -1,17 +1,19 @@
 # annotations-publish-healthchecker
-_Should be the same as the github repo name but it isn't always._
 
 [![Circle CI](https://circleci.com/gh/Financial-Times/annotations-publish-healthchecker/tree/master.png?style=shield)](https://circleci.com/gh/Financial-Times/annotations-publish-healthchecker/tree/master)[![Go Report Card](https://goreportcard.com/badge/github.com/Financial-Times/annotations-publish-healthchecker)](https://goreportcard.com/report/github.com/Financial-Times/annotations-publish-healthchecker) [![Coverage Status](https://coveralls.io/repos/github/Financial-Times/annotations-publish-healthchecker/badge.svg)](https://coveralls.io/github/Financial-Times/annotations-publish-healthchecker)
 
 ## Introduction
 
-_What is this service and what is it for? What other services does it depend on_
+This is a service, that reports whether the annotations publishing flow works as expected.
+It checks and caches a "healthiness" status every minute. 
+The responses from the __health and __details endpoint will be provided based on this cache.
 
-Service that reports whether the annotations publishing flow works as expected.
+
+"Annotations publish flow healthiness check"
+Such a check is looking for unclosed annotation publish transactions (transactions with no PublishEnd events).
+Since the monitoring service closes the transactions every 5 minutes, this healthchecker verifies the transactions happening before the latest 5 minutes, and it checks for a period of 10 minutes.
 
 ## Installation
-      
-_How can I install it_
 
 Download the source code, dependencies and test dependencies:
 
@@ -22,7 +24,6 @@ Download the source code, dependencies and test dependencies:
         go build .
 
 ## Running locally
-_How can I run it_
 
 1. Run the tests and install the binary:
 
@@ -38,41 +39,46 @@ Options:
 
         --app-system-code="annotations-publish-healthchecker"            System Code of the application ($APP_SYSTEM_CODE)
         --app-name="Annotations Publish Healthchecker"                   Application name ($APP_NAME)
-        --port="8080"                                           Port to listen on ($APP_PORT)
-        
-3. Test:
-
-    1. Either using curl:
-
-            curl http://localhost:8080/people/143ba45c-2fb3-35bc-b227-a6ed80b5c517 | json_pp
-
-    1. Or using [httpie](https://github.com/jkbrzt/httpie):
-
-            http GET http://localhost:8080/people/143ba45c-2fb3-35bc-b227-a6ed80b5c517
+        --port="8080"                                                    Port to listen on ($APP_PORT)
+        --event-reader="http://localhost:8080/__splunk-event-reader"     URL for the Splunk Event Reader
 
 ## Build and deployment
-_How can I build and deploy it (lots of this will be links out as the steps will be common)_
 
 * Built by Docker Hub on merge to master: [coco/annotations-publish-healthchecker](https://hub.docker.com/r/coco/annotations-publish-healthchecker/)
 * CI provided by CircleCI: [annotations-publish-healthchecker](https://circleci.com/gh/Financial-Times/annotations-publish-healthchecker)
 
 ## Service endpoints
-_What are the endpoints offered by the service_
 
 e.g.
 ### GET
 
 Using curl:
 
-    curl http://localhost:8080/people/143ba45c-2fb3-35bc-b227-a6ed80b5c517 | json_pp`
+    curl http://localhost:8080/__health | json_pp`
+    
+    curl http://localhost:8080/__details | json_pp`
 
 Or using [httpie](https://github.com/jkbrzt/httpie):
 
-    http GET http://localhost:8080/people/143ba45c-2fb3-35bc-b227-a6ed80b5c517
+    http GET http://localhost:8080/__details
 
-The expected response will contain information about the person, and the organisations they are connected to (via memberships).
+The expected response will contain information about the health of the annotations publish flow.
 
-Based on the following [google doc](https://docs.google.com/document/d/1SC4Uskl-VD78y0lg5H2Gq56VCmM4OFHofZM-OvpsOFo/edit#heading=h.qjo76xuvpj83).
+An example response for the `__details` endpoint looks like this:
+    
+    {
+    failed_transactions: [ ],
+    event_reader_checking_period: "Between -15m and -5m",
+    event_reader_checking_time: "2017-12-19T16:43:06.351754912+02:00",
+    event_reader_was_reachable: true
+    }
+    
+
+The response indicates:
+ - `failed_transactions`: list of the transactions that have recently failed (`transaction_id`, `uuid`, `publish_start` time - if known)
+ - `event_reader_checking_period`: the period that the check was executed for (defaults to an interval of 10 minutes, with a 5 minute delay)
+ - `event_reader_checking_time`: the exact time when the sanity check happened
+ - `event_reader_was_reachable`: whether the last sanity check was successful (the event reader could be reached) - otherwise we cannot know that the publishing flow is working properly
 
 
 ## Utility endpoints
@@ -85,25 +91,13 @@ Admin endpoints are:
 
 `/__health`
 
+The health endpoint executes two checks:
+- `Splunk Event Reader is reachable` - This check verifies whether the latest call to the splunk-event-reader was successful, hence the healthcheck results are relevant
+- `Annotations Publish Failures` - Splunk-event-reader is reachable, and at least 2 publish failures were detected for the latest call.
+
 `/__build-info`
-
-_These standard endpoints do not need to be specifically documented._
-
-_This section *should* however explain what checks are done to determine health and gtg status._
-
-There are several checks performed:
-
-_e.g._
-* Checks that a connection can be made to Neo4j, using the neo4j url supplied as a parameter in service startup.
-
-## Other information
-_Anything else you want to add._
-
-_e.g. (NB: this example may be something we want to extract as it's probably common to a lot of services)_
 
 ### Logging
 
-* The application uses [logrus](https://github.com/Sirupsen/logrus); the log file is initialised in [main.go](main.go).
-* Logging requires an `env` app parameter, for all environments other than `local` logs are written to file.
-* When running locally, logs are written to console. If you want to log locally to file, you need to pass in an env parameter that is != `local`.
+* The application uses the FT logging library [go-logger](https://github.com/Financial-Times/go-logger), which is based on [logrus](https://github.com/sirupsen/logrus).
 * NOTE: `/__build-info` and `/__gtg` endpoints are not logged as they are called every second from varnish/vulcand and this information is not needed in logs/splunk.

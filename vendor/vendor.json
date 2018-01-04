@@ -15,6 +15,12 @@
 			"revisionTime": "2017-10-20T13:42:12Z"
 		},
 		{
+			"checksumSHA1": "eQJNFoxeNYlvXsrc762OCAmvXCE=",
+			"path": "github.com/Financial-Times/go-logger/test",
+			"revision": "ec38b420999cfcbc86816afb47f365dad510450c",
+			"revisionTime": "2017-10-20T13:42:12Z"
+		},
+		{
 			"checksumSHA1": "dqF1g4reeLPNN10qTXgDJj3fHm4=",
 			"path": "github.com/Financial-Times/http-handlers-go/httphandlers",
 			"revision": "229ac16f1d9ec9bca485d2dafb9ec14dc7e9ba24",

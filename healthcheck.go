@@ -9,8 +9,9 @@ import (
 const healthPath = "/__health"
 
 type healthService struct {
-	config *healthConfig
-	checks []health.Check
+	config        *healthConfig
+	checks        []health.Check
+	healthchecker *healthcheckerService
 }
 
 type healthConfig struct {
@@ -19,18 +20,20 @@ type healthConfig struct {
 	port          string
 }
 
-func newHealthService(config *healthConfig) *healthService {
+func newHealthService(config *healthConfig, healthchecker *healthcheckerService) *healthService {
 	service := &healthService{config: config}
 	service.checks = []health.Check{
 		service.reachabilityCheck(),
 		service.failedTransactionsCheck(),
 	}
+	service.healthchecker = healthchecker
+
 	return service
 }
 
 func (service *healthService) reachabilityCheck() health.Check {
 	return health.Check{
-		BusinessImpact:   "Shows whether this service can monitor the success of the annotations publishing",
+		BusinessImpact:   "Shows whether this healthcheckerService can monitor the success of the annotations publishing",
 		Name:             "Splunk Event Reader is reachable",
 		PanicGuide:       "https://dewey.ft.com/annotations-publish-healthchecker.html",
 		Severity:         1,
@@ -40,10 +43,8 @@ func (service *healthService) reachabilityCheck() health.Check {
 }
 
 func (service *healthService) eventReaderIsReachable() (string, error) {
-
-	msg := fmt.Sprintf("Latest check at: %s", cache.LastTimeCheck)
-
-	if cache.Successful {
+	msg := fmt.Sprintf("Latest check at: %s", service.healthchecker.healthStatus.LastTimeCheck)
+	if service.healthchecker.healthStatus.Successful {
 		return fmt.Sprintf("Splunk Event Reader was reachable. %s", msg), nil
 	} else {
 		return "", fmt.Errorf("Splunk Event Reader was not reachable. %s", msg)
@@ -52,7 +53,7 @@ func (service *healthService) eventReaderIsReachable() (string, error) {
 
 func (service *healthService) failedTransactionsCheck() health.Check {
 	return health.Check{
-		BusinessImpact:   "At least 2 publishes failures were detected for the latest check. This will reflect in the SLA measurement.",
+		BusinessImpact:   "At least 2 publish failures were detected for the latest check. This will reflect in the SLA measurement.",
 		Name:             "Annotations Publish Failures",
 		PanicGuide:       "https://dewey.ft.com/annotations-publish-healthchecker.html",
 		Severity:         1,
@@ -63,9 +64,8 @@ func (service *healthService) failedTransactionsCheck() health.Check {
 
 func (service *healthService) failedTransactionsChecker() (string, error) {
 
-	msg := fmt.Sprintf("NO of failures: %d. Latest check at: %s", len(cache.OpenTransactions), cache.LastTimeCheck)
-
-	if len(cache.OpenTransactions) >= 2 {
+	msg := fmt.Sprintf("NO of failures: %d. Latest check at: %s", len(service.healthchecker.healthStatus.OpenTransactions), service.healthchecker.healthStatus.LastTimeCheck)
+	if len(service.healthchecker.healthStatus.OpenTransactions) >= 2 {
 		return "", fmt.Errorf("Degradation detected. %s", msg)
 	} else {
 		return fmt.Sprintf("No degradation detected. %s", msg), nil

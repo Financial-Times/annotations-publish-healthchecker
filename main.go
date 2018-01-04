@@ -15,6 +15,7 @@ import (
 	health "github.com/Financial-Times/go-fthealth/v1_1"
 	log "github.com/Financial-Times/go-logger"
 	status "github.com/Financial-Times/service-status-go/httphandlers"
+	"time"
 )
 
 const appDescription = "Service that reports whether the annotations publishing flow works as expected."
@@ -56,21 +57,13 @@ func main() {
 	app.Action = func() {
 		log.Infof("System code: %s, App Name: %s, Port: %s", *appSystemCode, *appName, *port)
 
-		handler := requestHandler{eventReaderAddress: *eventReader}
-		cache = txCache{}
+		s := healthcheckerService{eventReaderAddress: *eventReader, healthStatus: healthStatus{}}
+		ticker := time.NewTicker(1 * time.Minute)
+		s.monitorPublishHealth(ticker)
 
 		go func() {
-			serveEndpoints(*appSystemCode, *appName, *port, &handler)
+			serveEndpoints(*appSystemCode, *appName, *port, &s)
 		}()
-
-		// todo: insert app code here
-
-		// have the queries from the SLA Publish Failure Alerts inside this service
-		// (actually, we could ignore the SLA only related once, and consider only the error ones,
-		// 	or those, with missing PublishEnd)
-		// these queries would be executed periodically, every 10-15 minutes
-
-		handler.checkMonitoringStatus()
 
 		waitForSignal()
 	}
@@ -81,8 +74,8 @@ func main() {
 	}
 }
 
-func serveEndpoints(appSystemCode string, appName string, port string, handler *requestHandler) {
-	healthService := newHealthService(&healthConfig{appSystemCode: appSystemCode, appName: appName, port: port})
+func serveEndpoints(appSystemCode string, appName string, port string, healthchecker *healthcheckerService) {
+	healthService := newHealthService(&healthConfig{appSystemCode: appSystemCode, appName: appName, port: port}, healthchecker)
 
 	serveMux := http.NewServeMux()
 
@@ -91,8 +84,9 @@ func serveEndpoints(appSystemCode string, appName string, port string, handler *
 	serveMux.HandleFunc(status.GTGPath, status.NewGoodToGoHandler(healthService.gtgCheck))
 	serveMux.HandleFunc(status.BuildInfoPath, status.BuildInfoHandler)
 
+	handler := requestHandler{healthchecker}
 	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/__details", handler.getOpenTransactions).Methods("GET")
+	servicesRouter.HandleFunc("/__details", handler.getHealthDetails).Methods("GET")
 
 	var monitoringRouter http.Handler = servicesRouter
 	monitoringRouter = httphandlers.TransactionAwareRequestLoggingHandler(log.Logger(), monitoringRouter)
