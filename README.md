@@ -6,12 +6,13 @@
 
 This is a service, that reports whether the annotations publishing flow works as expected.
 It checks and caches a "healthiness" status every minute. 
-The responses from the __health and __details endpoint will be provided based on this cache.
+The responses from the __health and __details endpoints will be provided based on this cache.
 
 
 "Annotations publish flow healthiness check"
-Such a check is looking for unclosed annotation publish transactions (transactions with no PublishEnd events).
-Since the monitoring service closes the transactions every 5 minutes, this healthchecker verifies the transactions happening before the latest 5 minutes, and it checks for a period of 10 minutes.
+
+This check is looking for unclosed annotation-publish transactions (transactions with no PublishEnd events).
+Since the monitoring service closes the transactions every 5 minutes, this healthchecker verifies the transactions happening before the latest 6 minutes (there is an extra 1 minute considered for processing time), and it checks for a period of 10 minutes.
 
 ## Installation
 
@@ -64,11 +65,11 @@ Or using [httpie](https://github.com/jkbrzt/httpie):
 
 The expected response will contain information about the health of the annotations publish flow.
 
-An example response for the `__details` endpoint looks like this:
+The response for the `__details` endpoint looks like this:
     
     {
     failed_transactions: [ ],
-    event_reader_checking_period: "Between -15m and -5m",
+    event_reader_checking_period: "Between -16m and -6m",
     event_reader_checking_time: "2017-12-19T16:43:06.351754912+02:00",
     event_reader_was_reachable: true
     }

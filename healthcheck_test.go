@@ -51,8 +51,6 @@ func TestEventReaderIsNotReachable(t *testing.T) {
 	assert.Empty(t, message)
 }
 
-// TODO make a struct, and verify as such
-
 func TestFailedTransactionsChecker_0(t *testing.T) {
 
 	healthcheckerServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

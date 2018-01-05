@@ -43,8 +43,10 @@ func (service *healthService) reachabilityCheck() health.Check {
 }
 
 func (service *healthService) eventReaderIsReachable() (string, error) {
-	msg := fmt.Sprintf("Latest check at: %s", service.healthchecker.healthStatus.LastTimeCheck)
-	if service.healthchecker.healthStatus.Successful {
+
+	status := service.healthchecker.getHealthStatus().(healthStatus)
+	msg := fmt.Sprintf("Latest check at: %s", status.LastTimeCheck)
+	if status.Successful {
 		return fmt.Sprintf("Splunk Event Reader was reachable. %s", msg), nil
 	} else {
 		return "", fmt.Errorf("Splunk Event Reader was not reachable. %s", msg)
@@ -64,8 +66,9 @@ func (service *healthService) failedTransactionsCheck() health.Check {
 
 func (service *healthService) failedTransactionsChecker() (string, error) {
 
-	msg := fmt.Sprintf("NO of failures: %d. Latest check at: %s", len(service.healthchecker.healthStatus.OpenTransactions), service.healthchecker.healthStatus.LastTimeCheck)
-	if len(service.healthchecker.healthStatus.OpenTransactions) >= 2 {
+	status := service.healthchecker.getHealthStatus().(healthStatus)
+	msg := fmt.Sprintf("NO of failures: %d. Latest check at: %s", len(status.OpenTransactions), status.LastTimeCheck)
+	if len(status.OpenTransactions) >= 2 {
 		return "", fmt.Errorf("Degradation detected. %s", msg)
 	} else {
 		return fmt.Sprintf("No degradation detected. %s", msg), nil

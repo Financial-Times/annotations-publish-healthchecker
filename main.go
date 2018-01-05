@@ -21,6 +21,16 @@ import (
 const appDescription = "Service that reports whether the annotations publishing flow works as expected."
 
 func main() {
+	ticker := time.NewTicker(1 * time.Minute)
+	app := initApp(ticker)
+	err := app.Run(os.Args)
+	if err != nil {
+		log.Errorf("App could not start, error=[%s]\n", err)
+		return
+	}
+}
+
+func initApp(ticker *time.Ticker) *cli.Cli {
 	app := cli.App("annotations-publish-healthchecker", appDescription)
 
 	appSystemCode := app.String(cli.StringOpt{
@@ -58,23 +68,19 @@ func main() {
 		log.Infof("System code: %s, App Name: %s, Port: %s", *appSystemCode, *appName, *port)
 
 		s := healthcheckerService{eventReaderAddress: *eventReader, healthStatus: healthStatus{}}
-		ticker := time.NewTicker(1 * time.Minute)
 		s.monitorPublishHealth(ticker)
 
 		go func() {
-			serveEndpoints(*appSystemCode, *appName, *port, &s)
+			routeRequests(*appSystemCode, *appName, *port, &s)
 		}()
 
 		waitForSignal()
 	}
-	err := app.Run(os.Args)
-	if err != nil {
-		log.Errorf("App could not start, error=[%s]\n", err)
-		return
-	}
+
+	return app
 }
 
-func serveEndpoints(appSystemCode string, appName string, port string, healthchecker *healthcheckerService) {
+func routeRequests(appSystemCode string, appName string, port string, healthchecker *healthcheckerService) {
 	healthService := newHealthService(&healthConfig{appSystemCode: appSystemCode, appName: appName, port: port}, healthchecker)
 
 	serveMux := http.NewServeMux()

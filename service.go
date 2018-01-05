@@ -14,8 +14,8 @@ import (
 const (
 	earliestTimePathVar = "earliestTime"
 	latestTimePathVar   = "latestTime"
-	earliestTime        = "-15m"
-	latestTime          = "-5m"
+	earliestTime        = "-16m"
+	latestTime          = "-6m"
 	contentType         = "annotations"
 	timestampFormat     = time.RFC3339Nano
 )
@@ -59,7 +59,12 @@ func (s *healthcheckerService) monitorPublishHealth(ticker *time.Ticker) chan bo
 }
 
 func (s *healthcheckerService) getHealthStatus() interface{} {
-	return s.healthStatus
+
+	s.RLock()
+	status := s.healthStatus
+	s.RUnlock()
+
+	return status
 }
 
 func determineHealth(eventReaderAddress string, contentType string, earliestTime string, latestTime string) healthStatus {

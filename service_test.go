@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	logger "github.com/Financial-Times/go-logger/test"
 	"github.com/stretchr/testify/assert"
 	"net/http"
@@ -165,18 +166,18 @@ func TestMonitorPublishHealth(t *testing.T) {
 	}))
 	defer healthcheckerServer.Close()
 
-	server := healthcheckerService{
+	service := healthcheckerService{
 		eventReaderAddress: healthcheckerServer.URL,
 		healthStatus:       healthStatus{},
 	}
 
 	ticker := time.NewTicker(1 * time.Second)
-	quit := server.monitorPublishHealth(ticker)
+	quit := service.monitorPublishHealth(ticker)
 
 	time.Sleep(5 * time.Second)
 	quit <- true
 
-	assertEqual(t, server.getHealthStatus().(healthStatus), healthStatus{txs, "", "Between -15m and -5m", true})
+	assertEqual(t, service.getHealthStatus().(healthStatus), healthStatus{txs, "", fmt.Sprintf("Between %s and %s", earliestTime, latestTime), true})
 	assert.Equal(t, 0, len(hook.Entries))
 }
 
