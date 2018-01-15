@@ -16,6 +16,7 @@ type input struct {
 	contentType        string
 	earliestTime       string
 	latestTime         string
+	slaWindow          time.Duration
 }
 
 type output struct {
@@ -40,7 +41,7 @@ func TestDetermineHealth_Unhealthy(t *testing.T) {
 		out      output
 	}{
 		{"Incorrect address - wrong protocol",
-			input{"address", "annotations", "earliest-time", "latest-time"},
+			input{"address", "annotations", "earliest-time", "latest-time", 2 * 60 * time.Second},
 			output{healthStatus{
 				[]transaction{},
 				time.Now().Format(timestampFormat),
@@ -51,7 +52,7 @@ func TestDetermineHealth_Unhealthy(t *testing.T) {
 			},
 		},
 		{"Incorrect address - no response",
-			input{"http://localhost:8080", "annotations", "earliest-time", "latest-time"},
+			input{"http://localhost:8080", "annotations", "earliest-time", "latest-time", 2 * 60 * time.Second},
 			output{healthStatus{
 				[]transaction{},
 				time.Now().Format(timestampFormat),
@@ -62,7 +63,7 @@ func TestDetermineHealth_Unhealthy(t *testing.T) {
 			},
 		},
 		{"Server errors: 503",
-			input{healthcheckerServer.URL, "annotations", "earliest-time", "latest-time"},
+			input{healthcheckerServer.URL, "annotations", "earliest-time", "latest-time", 2 * 60 * time.Second},
 			output{healthStatus{
 				[]transaction{},
 				time.Now().Format(timestampFormat),
@@ -76,7 +77,7 @@ func TestDetermineHealth_Unhealthy(t *testing.T) {
 
 	for _, test := range tests {
 
-		res := determineHealth(test.in.eventReaderAddress, test.in.contentType, test.in.earliestTime, test.in.latestTime)
+		res := determineHealth(test.in.eventReaderAddress, test.in.slaWindow, test.in.contentType, test.in.earliestTime, test.in.latestTime)
 		if test.out.outputMsg == "" {
 			assert.Equal(t, 0, len(hook.Entries))
 		} else {
@@ -103,7 +104,7 @@ func TestDetermineHealth_IncorrectResponse(t *testing.T) {
 	}))
 	defer healthcheckerServer.Close()
 
-	res := determineHealth(healthcheckerServer.URL, "anyType", "earliestTime", "latestTime")
+	res := determineHealth(healthcheckerServer.URL, 2*60*time.Second, "anyType", "earliestTime", "latestTime")
 	assert.Equal(t, 1, len(hook.Entries))
 	assert.Contains(t, hook.LastEntry().Message, "Error unmarshalling transaction log messages for url")
 	assert.Contains(t, hook.LastEntry().Data["error"].(error).Error(), "invalid character")
@@ -118,12 +119,12 @@ func TestDetermineHealth_200(t *testing.T) {
 		{
 			TransactionID: "tid1",
 			UUID:          "uuid1",
-			LastModified:  "some_date1",
+			LastModified:  "2018-01-15T14:57:42.567Z",
 		},
 		{
 			TransactionID: "tid2",
 			UUID:          "uuid2",
-			LastModified:  "some_date2",
+			LastModified:  "2017-12-15T14:57:42.567Z",
 		},
 	}
 
@@ -136,7 +137,7 @@ func TestDetermineHealth_200(t *testing.T) {
 	}))
 	defer healthcheckerServer.Close()
 
-	res := determineHealth(healthcheckerServer.URL, "anyType", "earliestTime", "latestTime")
+	res := determineHealth(healthcheckerServer.URL, 2*60*time.Second, "anyType", "earliestTime", "latestTime")
 	assert.Equal(t, 0, len(hook.Entries))
 	assertEqual(t, healthStatus{txs, "", "Between earliestTime and latestTime", true}, res)
 }
@@ -148,12 +149,12 @@ func TestMonitorPublishHealth(t *testing.T) {
 		{
 			TransactionID: "tid1",
 			UUID:          "uuid1",
-			LastModified:  "some_date1",
+			LastModified:  "2017-01-15T14:57:42.567Z",
 		},
 		{
 			TransactionID: "tid2",
 			UUID:          "uuid2",
-			LastModified:  "some_date2",
+			LastModified:  "2017-02-13T12:00:00.000Z",
 		},
 	}
 
@@ -179,6 +180,110 @@ func TestMonitorPublishHealth(t *testing.T) {
 
 	assertEqual(t, service.getHealthStatus().(healthStatus), healthStatus{txs, "", fmt.Sprintf("Between %s and %s", earliestTime, latestTime), true})
 	assert.Equal(t, 0, len(hook.Entries))
+}
+
+func TestIgnoreSLAWindow(t *testing.T) {
+
+	timeCheck := "2017-02-13T12:00:00.000Z"
+	slaWindow := 2 * 60 * time.Second
+	fullTXS := []transaction{
+		{ // OK
+			TransactionID: "tid1",
+			UUID:          "uuid1",
+			LastModified:  "2017-02-13T11:55:00.000Z",
+		},
+		{ // OUTSIDE SLA
+			TransactionID: "tid2",
+			UUID:          "uuid2",
+			LastModified:  "2017-02-13T11:59:00.000Z",
+		},
+		{ // OUTSIDE SLA
+			TransactionID: "tid2",
+			UUID:          "uuid2",
+			LastModified:  "2017-02-13T11:58:59.000Z",
+		},
+		{ // OK
+			TransactionID: "tid2",
+			UUID:          "uuid2",
+			LastModified:  "2017-02-13T11:50:59.000Z",
+		},
+		{ // OK
+			TransactionID: "tid2",
+			UUID:          "uuid2",
+			LastModified:  "not_parsable",
+		},
+	}
+
+	expTXS := transactions{
+		{
+			TransactionID: "tid1",
+			UUID:          "uuid1",
+			LastModified:  "2017-02-13T11:55:00.000Z",
+		},
+		{
+			TransactionID: "tid2",
+			UUID:          "uuid2",
+			LastModified:  "2017-02-13T11:50:59.000Z",
+		},
+		{
+			TransactionID: "tid2",
+			UUID:          "uuid2",
+			LastModified:  "not_parsable",
+		},
+	}
+
+	actualTXS := ignoreSLAWindow(fullTXS, timeCheck, slaWindow)
+	assert.Equal(t, expTXS, actualTXS)
+}
+
+func TestInsideSLA(t *testing.T) {
+
+	var tests = []struct {
+		timeToCompare string
+		checkingTime  string
+		slaWindow     time.Duration
+		isInsideSLA   bool
+	}{
+		{
+			"2017-02-13T11:59:00.000Z",
+			"2017-02-13T12:00:00.000Z",
+			2 * 60 * time.Second,
+			true,
+		},
+		{
+			"2017-02-13T11:58:59.000Z",
+			"2017-02-13T12:00:00.000Z",
+			2 * 60 * time.Second,
+			true,
+		},
+		{
+			"2017-02-13T11:58:00.000Z",
+			"2017-02-13T12:00:00.000Z",
+			2 * 60 * time.Second,
+			false,
+		},
+		{
+			"2017-02-13T11:50:00.000Z",
+			"2017-02-13T12:00:00.000Z",
+			2 * 60 * time.Second,
+			false,
+		},
+	}
+
+	for _, test := range tests {
+		actualSLA := insideSLA(test.timeToCompare, test.checkingTime, test.slaWindow)
+		assert.Equal(t, test.isInsideSLA, actualSLA)
+	}
+}
+
+func TestInsideSLA_NotParsable(t *testing.T) {
+
+	hook := logger.NewTestHook("healthchecker-test")
+	actualSLA := insideSLA("not_parsable", "2017-02-13T12:00:00.000Z", 2*60*time.Second)
+	assert.Equal(t, false, actualSLA)
+	assert.Equal(t, 1, len(hook.Entries))
+	assert.Contains(t, hook.LastEntry().Message, "Duration couldn't be determined for timestamp not_parsable")
+
 }
 
 func assertEqual(t *testing.T, s1 healthStatus, s2 healthStatus) {

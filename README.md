@@ -4,15 +4,17 @@
 
 ## Introduction
 
-This is a service, that reports whether the annotations publishing flow works as expected.
+This is a service, that reports whether the annotations publish flow works as expected.
 It checks and caches a "healthiness" status every minute. 
 The responses from the __health and __details endpoints will be provided based on this cache.
 
+`Note`: the results are given for a certain period in the past, the latest results being ignored.
+(This happens due to the current implementation of the monitoring flow, which closes the transactions with a given delay. In this time period we have no knowledge about the successfulness of an annotation publish.)
 
-"Annotations publish flow healthiness check"
+##### Annotations publish flow healthiness check
 
 This check is looking for unclosed annotation-publish transactions (transactions with no PublishEnd events).
-Since the monitoring service closes the transactions every 5 minutes, this healthchecker verifies the transactions happening before the latest 6 minutes (there is an extra 1 minute considered for processing time), and it checks for a period of 10 minutes.
+Since the monitoring service closes the transactions every 5 minutes, this healthchecker verifies the transactions happening before the latest 5 minutes (ignoring another 2 minutes SLA window, period when the transactions still can be closed) and it checks for a period of 10 minutes.
 
 ## Installation
 
@@ -69,7 +71,7 @@ The response for the `__details` endpoint looks like this:
     
     {
     failed_transactions: [ ],
-    event_reader_checking_period: "Between -16m and -6m",
+    event_reader_checking_period: "Between -15m and -5m",
     event_reader_checking_time: "2017-12-19T16:43:06.351754912+02:00",
     event_reader_was_reachable: true
     }

@@ -54,6 +54,13 @@ func initApp(ticker *time.Ticker) *cli.Cli {
 		EnvVar: "SPLUNK_EVENT_READER",
 	})
 
+	slaWindow := app.Int(cli.IntOpt{
+		Name:   "sla-window",
+		Value:  2,
+		Desc:   "Time period to ignore, when we have no information about annotations publishes. Given in minutes.",
+		EnvVar: "SLA_WINDOW",
+	})
+
 	port := app.String(cli.StringOpt{
 		Name:   "port",
 		Value:  "8083",
@@ -67,7 +74,11 @@ func initApp(ticker *time.Ticker) *cli.Cli {
 	app.Action = func() {
 		log.Infof("System code: %s, App Name: %s, Port: %s", *appSystemCode, *appName, *port)
 
-		s := healthcheckerService{eventReaderAddress: *eventReader, healthStatus: healthStatus{}}
+		s := healthcheckerService{
+			eventReaderAddress: *eventReader,
+			healthStatus:       healthStatus{},
+			slaWindow:          time.Duration(*slaWindow) * 60 * time.Second,
+		}
 		s.monitorPublishHealth(ticker)
 
 		go func() {

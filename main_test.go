@@ -29,12 +29,12 @@ var (
 		{
 			TransactionID: "tid1",
 			UUID:          "uuid1",
-			LastModified:  "some_date1",
+			LastModified:  "2017-10-16T14:00:00.000Z",
 		},
 		{
 			TransactionID: "tid2",
 			UUID:          "uuid2",
-			LastModified:  "some_date2",
+			LastModified:  "2017-10-16T16:00:00.000Z",
 		},
 	}
 )

@@ -88,7 +88,7 @@ func TestFailedTransactionsChecker_1(t *testing.T) {
 			{
 				TransactionID: "tid1",
 				UUID:          "uuid1",
-				LastModified:  "some_date",
+				LastModified:  "2017-01-15T14:57:42.567Z",
 			},
 		},
 		Successful: true,
@@ -116,12 +116,12 @@ func TestFailedTransactionsChecker_2(t *testing.T) {
 			{
 				TransactionID: "tid1",
 				UUID:          "uuid1",
-				LastModified:  "some_date1",
+				LastModified:  "2017-10-15T14:57:42.567Z",
 			},
 			{
 				TransactionID: "tid2",
 				UUID:          "uuid2",
-				LastModified:  "some_date2",
+				LastModified:  "2017-10-16T14:00:00.000Z",
 			},
 		},
 		Successful: true,
@@ -148,7 +148,7 @@ func TestEventReader_GTG_Succeeds(t *testing.T) {
 			{
 				TransactionID: "tid1",
 				UUID:          "uuid1",
-				LastModified:  "some_date",
+				LastModified:  "2017-10-16T14:00:00.000Z",
 			},
 		},
 		Successful: true,
@@ -175,7 +175,7 @@ func TestEventReader_GTG_Fails(t *testing.T) {
 			{
 				TransactionID: "tid1",
 				UUID:          "uuid1",
-				LastModified:  "some_date",
+				LastModified:  "2017-10-16T14:00:00.000Z",
 			},
 		},
 		Successful: false,
