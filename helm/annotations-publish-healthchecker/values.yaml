@@ -1,16 +1,15 @@
-# Default values for annotations-publish-healthchecker.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
 service:
   name: "" # The name of the service, should be defined in the specific app-configs folder.
   hasHealthcheck: "true"
-replicaCount: 2
+replicaCount: 1
 image:
   repository: coco/annotations-publish-healthchecker
-  version: "" # should be set explicitly at installation
   pullPolicy: IfNotPresent
 resources:
+  requests:
+    memory: 60Mi
   limits:
-    memory: 256Mi
+    memory: 128Mi
 env:
-  ENV_VAR_1: "default value"
+  SLA_WINDOW: 2
+  SPLUNK_EVENT_READER: ""

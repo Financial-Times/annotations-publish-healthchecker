@@ -1,5 +1,6 @@
 # Values used for the deployed application.
+replicaCount: 1
 service:
   name: annotations-publish-healthchecker
 env:
-  ENV_VAR_1: "value1"
+  SPLUNK_EVENT_READER: "http://splunk-event-reader:8080"

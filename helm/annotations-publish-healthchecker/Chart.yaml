@@ -1,4 +1,4 @@
 apiVersion: v1
-description: A Helm chart for Kubernetes
+description: Annotations publish healthchecker helm chart for Kubernetes
 name: annotations-publish-healthchecker
 version: 0.0.0

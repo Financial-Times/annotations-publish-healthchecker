@@ -49,7 +49,7 @@ func initApp(ticker *time.Ticker) *cli.Cli {
 
 	eventReader := app.String(cli.StringOpt{
 		Name:   "event-reader",
-		Value:  "http://localhost:8080/__splunk-event-reader",
+		Value:  "http://localhost:8083/__splunk-event-reader",
 		Desc:   "Splunk Event Reader Address",
 		EnvVar: "SPLUNK_EVENT_READER",
 	})
@@ -63,7 +63,7 @@ func initApp(ticker *time.Ticker) *cli.Cli {
 
 	port := app.String(cli.StringOpt{
 		Name:   "port",
-		Value:  "8083",
+		Value:  "8080",
 		Desc:   "Port to listen on",
 		EnvVar: "APP_PORT",
 	})
