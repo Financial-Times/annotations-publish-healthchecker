@@ -77,7 +77,7 @@ func initApp(ticker *time.Ticker) *cli.Cli {
 		s := healthcheckerService{
 			eventReaderAddress: *eventReader,
 			healthStatus:       healthStatus{},
-			slaWindow:          time.Duration(*slaWindow) * 60 * time.Second,
+			slaWindow:          *slaWindow,
 		}
 		s.monitorPublishHealth(ticker)
 

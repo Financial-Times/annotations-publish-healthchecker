@@ -7,6 +7,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -31,7 +33,7 @@ type healthmonitor interface {
 type healthcheckerService struct {
 	eventReaderAddress string
 	healthStatus       healthStatus
-	slaWindow          time.Duration
+	slaWindow          int
 	sync.RWMutex
 }
 
@@ -68,10 +70,11 @@ func (s *healthcheckerService) getHealthStatus() interface{} {
 	return status
 }
 
-func determineHealth(eventReaderAddress string, slaWindow time.Duration, contentType string, earliestTime string, latestTime string) healthStatus {
+func determineHealth(eventReaderAddress string, slaWindow int, contentType string, earliestTime string, latestTime string) healthStatus {
 
-	timeCheck := time.Now().Format(timestampFormat)
-	checkPeriod := fmt.Sprintf("Between %s and %s", earliestTime, latestTime)
+	now := time.Now()
+	checkingTime := now.Format(timestampFormat)
+	checkingPeriod := fmt.Sprintf("Between %s and %s", earliestTime, latestTime)
 
 	req, err := http.NewRequest("GET", eventReaderAddress+"/"+contentType+"/transactions", nil)
 
@@ -83,65 +86,63 @@ func determineHealth(eventReaderAddress string, slaWindow time.Duration, content
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		logger.WithError(err).Errorf("Failed to retrieve transactions from %s", req.URL.String())
-		return healthStatus{[]transaction{}, timeCheck, checkPeriod, false}
+		return healthStatus{[]transaction{}, checkingTime, checkingPeriod, false}
 	}
 	defer cleanUp(resp)
 
 	if resp.StatusCode != http.StatusOK {
 		logger.WithError(err).Errorf("Failed to retrieve transactions from %s with status code %s", req.URL.String(), resp.StatusCode)
-		return healthStatus{[]transaction{}, timeCheck, checkPeriod, false}
+		return healthStatus{[]transaction{}, checkingTime, checkingPeriod, false}
 	}
 
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		logger.WithError(err).Errorf("Error parsing transaction body for url %s", req.URL.String())
-		return healthStatus{[]transaction{}, timeCheck, checkPeriod, false}
+		return healthStatus{[]transaction{}, checkingTime, checkingPeriod, false}
 	}
 
 	var txs transactions
 	if err := json.Unmarshal(b, &txs); err != nil {
 		logger.WithError(err).Errorf("Error unmarshalling transaction log messages for url %s", req.URL.String())
-		return healthStatus{[]transaction{}, timeCheck, checkPeriod, false}
+		return healthStatus{[]transaction{}, checkingTime, checkingPeriod, false}
 	}
 
-	// ignore publishes within the SLA window
-	// they could still successfully make through, even if they are unclosed yet
-	txs = ignoreSLAWindow(txs, timeCheck, slaWindow)
+	// ignore recent transactions that might be already closed - even if they are unclosed when the query happens
+	txs = ignoreRecentTransactions(txs, now, latestTime, slaWindow)
 
-	return healthStatus{txs, timeCheck, checkPeriod, true}
+	return healthStatus{txs, checkingTime, checkingPeriod, true}
 }
 
-func ignoreSLAWindow(txs transactions, timeCheck string, slaWindow time.Duration) transactions {
+func ignoreRecentTransactions(txs transactions, referenceTime time.Time, delay string, slaWindow int) transactions {
+
+	// compute the delay that the requests are executed with
+	delay = strings.Split(latestTime, "m")[0]
+	d, err := strconv.Atoi(delay)
+	if err != nil {
+		logger.WithError(err).Errorf("LatestTime (%s) was not parsable, couldn't be determined the delay that the requests are executed with. No transactions are filtered out from the resultset.", latestTime)
+		return txs
+	}
+
+	// compute the time when the checking period starts - example: the checks are done with a 5 minutes delay
+	referenceTime = referenceTime.Add(time.Duration(d) * time.Minute)
+
+	// ignore the SLA Window - publishes inside that could still successfully make through, even if they are unclosed yet
+	referenceTime = referenceTime.Add(-time.Duration(slaWindow) * time.Minute)
 
 	res := transactions{}
 	for _, tx := range txs {
-		if !insideSLA(tx.LastModified, timeCheck, slaWindow) {
+
+		// if time not parsable: don't filter out
+		txTime, err := time.Parse(timestampFormat, tx.LastModified)
+		if err != nil {
+			logger.WithError(err).Errorf("Duration couldn't be determined for timestamp %s.", txTime)
+			res = append(res, tx)
+		} else if !txTime.After(referenceTime) {
+			// if transaction time is before the reference time: consider it as a failed publish
 			res = append(res, tx)
 		}
 	}
 	return res
-}
-
-func insideSLA(timeToCompare string, checkingTime string, slaWindow time.Duration) bool {
-
-	// if not parsable => not inside SLA
-	t1, err := time.Parse(timestampFormat, timeToCompare)
-	if err != nil {
-		logger.WithError(err).Errorf("Duration couldn't be determined for timestamp %s.", timeToCompare)
-		return false
-	}
-
-	t2, _ := time.Parse(timestampFormat, checkingTime)
-	if err != nil {
-		logger.WithError(err).Errorf("Duration couldn't be determined for timestamp %s.", checkingTime)
-		return false
-	}
-
-	if t2.Sub(t1) < slaWindow {
-		return true
-	} else {
-		return false
-	}
 }
 
 func cleanUp(resp *http.Response) {
