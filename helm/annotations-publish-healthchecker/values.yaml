@@ -11,5 +11,5 @@ resources:
   limits:
     memory: 128Mi
 env:
-  SLA_WINDOW: 2
+  SLA_WINDOW: "2"
   SPLUNK_EVENT_READER: ""
