@@ -2,5 +2,3 @@
 replicaCount: 1
 service:
   name: annotations-publish-healthchecker
-env:
-  SPLUNK_EVENT_READER: "http://splunk-event-reader:8080"
