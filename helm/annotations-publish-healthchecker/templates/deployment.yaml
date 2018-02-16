@@ -37,9 +37,11 @@ spec:
             memory: 128Mi
         env:
         - name: SPLUNK_EVENT_READER
-          value: {{ .Values.env.SPLUNK_EVENT_READER }}
+          value: "http://splunk-event-reader:8080"
+        - name: APP_PORT
+          value: "8080"
         - name: SLA_WINDOW
-          value: "{{ .Values.env.SLA_WINDOW }}"
+          value: "2"
         ports:
         - containerPort: 8080
         livenessProbe:

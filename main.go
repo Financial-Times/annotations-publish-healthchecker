@@ -63,7 +63,7 @@ func initApp(ticker *time.Ticker) *cli.Cli {
 
 	port := app.String(cli.StringOpt{
 		Name:   "port",
-		Value:  "8080",
+		Value:  "8083",
 		Desc:   "Port to listen on",
 		EnvVar: "APP_PORT",
 	})
@@ -96,7 +96,16 @@ func routeRequests(appSystemCode string, appName string, port string, healthchec
 
 	serveMux := http.NewServeMux()
 
-	hc := health.HealthCheck{SystemCode: appSystemCode, Name: appName, Description: appDescription, Checks: healthService.checks}
+	hc := health.TimedHealthCheck{
+		HealthCheck: health.HealthCheck{
+			SystemCode:  appSystemCode,
+			Name:        appName,
+			Description: appDescription,
+			Checks:      healthService.checks,
+		},
+		Timeout: 10 * time.Second,
+	}
+
 	serveMux.HandleFunc(healthPath, health.Handler(hc))
 	serveMux.HandleFunc(status.GTGPath, status.NewGoodToGoHandler(healthService.gtgCheck))
 	serveMux.HandleFunc(status.BuildInfoPath, status.BuildInfoHandler)
