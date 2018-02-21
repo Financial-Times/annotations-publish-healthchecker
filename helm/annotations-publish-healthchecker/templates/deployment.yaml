@@ -18,34 +18,41 @@ spec:
         app: {{ .Values.service.name }}
         visualize: "true"
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - {{ .Values.service.name }}
+            topologyKey: "kubernetes.io/hostname"
       containers:
       - name: {{ .Chart.Name }}
         image: "{{ .Values.image.repository }}:{{ .Chart.Version }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
+        resources:
+          limits:
+            memory: 128Mi
         env:
-        - name: ENV_VAR_1
-          value: {{ .Values.env.ENV_VAR_1 }}
-        - name: ENV_VAR_WITH_VALUE_IN_CONFIG_MAP
-          valueFrom:
-            configMapKeyRef:
-              name: global-config
-              key: key.for.configmap.entry
-        - name: ENV_VAR_WITH_VALUE_IN_SECRET_MAP
-          valueFrom:
-            secretKeyRef:
-              name: global-secrets
-              key: key.for.secret.entry
+        - name: SPLUNK_EVENT_READER
+          value: "http://splunk-event-reader:8080"
+        - name: APP_PORT
+          value: "8080"
+        - name: SLA_WINDOW
+          value: "2"
         ports:
         - containerPort: 8080
         livenessProbe:
           tcpSocket:
             port: 8080
-          initialDelaySeconds: 10
+          initialDelaySeconds: 5
         readinessProbe:
           httpGet:
             path: "/__gtg"
             port: 8080
-          initialDelaySeconds: 15
+          initialDelaySeconds: 10
           periodSeconds: 30
         resources:
 {{ toYaml .Values.resources | indent 12 }}

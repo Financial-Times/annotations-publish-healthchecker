@@ -1,5 +1,4 @@
 # Values used for the deployed application.
+replicaCount: 1
 service:
   name: annotations-publish-healthchecker
-env:
-  ENV_VAR_1: "value1"

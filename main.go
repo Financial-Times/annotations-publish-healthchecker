@@ -49,9 +49,16 @@ func initApp(ticker *time.Ticker) *cli.Cli {
 
 	eventReader := app.String(cli.StringOpt{
 		Name:   "event-reader",
-		Value:  "http://localhost:8080/__splunk-event-reader",
+		Value:  "http://localhost:8083/__splunk-event-reader",
 		Desc:   "Splunk Event Reader Address",
 		EnvVar: "SPLUNK_EVENT_READER",
+	})
+
+	slaWindow := app.Int(cli.IntOpt{
+		Name:   "sla-window",
+		Value:  2,
+		Desc:   "Time period to ignore, when we have no information about annotations publishes. Given in minutes.",
+		EnvVar: "SLA_WINDOW",
 	})
 
 	port := app.String(cli.StringOpt{
@@ -67,7 +74,11 @@ func initApp(ticker *time.Ticker) *cli.Cli {
 	app.Action = func() {
 		log.Infof("System code: %s, App Name: %s, Port: %s", *appSystemCode, *appName, *port)
 
-		s := healthcheckerService{eventReaderAddress: *eventReader, healthStatus: healthStatus{}}
+		s := healthcheckerService{
+			eventReaderAddress: *eventReader,
+			healthStatus:       healthStatus{},
+			slaWindow:          *slaWindow,
+		}
 		s.monitorPublishHealth(ticker)
 
 		go func() {
@@ -85,7 +96,16 @@ func routeRequests(appSystemCode string, appName string, port string, healthchec
 
 	serveMux := http.NewServeMux()
 
-	hc := health.HealthCheck{SystemCode: appSystemCode, Name: appName, Description: appDescription, Checks: healthService.checks}
+	hc := health.TimedHealthCheck{
+		HealthCheck: health.HealthCheck{
+			SystemCode:  appSystemCode,
+			Name:        appName,
+			Description: appDescription,
+			Checks:      healthService.checks,
+		},
+		Timeout: 10 * time.Second,
+	}
+
 	serveMux.HandleFunc(healthPath, health.Handler(hc))
 	serveMux.HandleFunc(status.GTGPath, status.NewGoodToGoHandler(healthService.gtgCheck))
 	serveMux.HandleFunc(status.BuildInfoPath, status.BuildInfoHandler)
