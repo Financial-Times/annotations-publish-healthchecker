@@ -59,7 +59,7 @@ func (service *healthService) failedTransactionsCheck() health.Check {
 		Name:             "Annotations Publish Failures",
 		PanicGuide:       "https://dewey.ft.com/annotations-publish-healthchecker.html",
 		Severity:         1,
-		TechnicalSummary: "Annotations publishes failed. There is a degradation in the annotations publish or monitoring services.",
+		TechnicalSummary: "Annotations publishes failed. There is a degradation in the annotations publish or monitoring services. Check the /__details endpoint.",
 		Checker:          service.failedTransactionsChecker,
 	}
 }
