@@ -59,7 +59,7 @@ func (service *healthService) failedTransactionsCheck() health.Check {
 		Name:             "Annotations Publish Failures",
 		PanicGuide:       "https://dewey.ft.com/annotations-publish-healthchecker.html",
 		Severity:         1,
-		TechnicalSummary: "Annotations publishes failed. There is a degradation in the annotations publish or monitoring services.",
+		TechnicalSummary: "Annotations publishes failed. There is a degradation in the annotations publish or monitoring services. Check the /__details endpoint.",
 		Checker:          service.failedTransactionsChecker,
 	}
 }
@@ -76,10 +76,10 @@ func (service *healthService) failedTransactionsChecker() (string, error) {
 }
 
 func (service *healthService) gtgCheck() gtg.Status {
-	for _, check := range service.checks {
-		if _, err := check.Checker(); err != nil {
-			return gtg.Status{GoodToGo: false, Message: err.Error()}
-		}
+
+	if _, err := service.reachabilityCheck().Checker(); err != nil {
+		return gtg.Status{GoodToGo: false, Message: err.Error()}
 	}
+
 	return gtg.Status{GoodToGo: true}
 }
