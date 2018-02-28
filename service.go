@@ -135,7 +135,7 @@ func ignoreRecentTransactions(txs transactions, referenceTime time.Time, delay s
 		// if time not parsable: don't filter out
 		txTime, err := time.Parse(timestampFormat, tx.LastModified)
 		if err != nil {
-			logger.WithError(err).Errorf("Duration couldn't be determined for timestamp %s.", txTime)
+			logger.WithTransactionID(tx.TransactionID).WithError(err).Errorf("Duration couldn't be determined for timestamp %s.", txTime)
 			res = append(res, tx)
 		} else if !txTime.After(referenceTime) {
 			// if transaction time is before the reference time: consider it as a failed publish

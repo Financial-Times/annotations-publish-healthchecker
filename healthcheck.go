@@ -76,10 +76,10 @@ func (service *healthService) failedTransactionsChecker() (string, error) {
 }
 
 func (service *healthService) gtgCheck() gtg.Status {
-	for _, check := range service.checks {
-		if _, err := check.Checker(); err != nil {
-			return gtg.Status{GoodToGo: false, Message: err.Error()}
-		}
+
+	if _, err := service.reachabilityCheck().Checker(); err != nil {
+		return gtg.Status{GoodToGo: false, Message: err.Error()}
 	}
+
 	return gtg.Status{GoodToGo: true}
 }

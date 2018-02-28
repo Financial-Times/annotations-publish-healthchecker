@@ -102,7 +102,8 @@ func Test_GetGtg(t *testing.T) {
 	}{
 		{url: "http://localhost:8083/__gtg", expectedStatus: http.StatusOK, expectedHealth: true, errorIsExp: false},
 		{url: "http://localhost:8083/__gtg", expectedStatus: http.StatusServiceUnavailable, expectedHealth: false, errorIsExp: true},
-		{url: "http://localhost:8083/__gtg", expectedStatus: http.StatusServiceUnavailable, expectedHealth: false, errorIsExp: false},
+		// __gtg no more depends on the flow health (transaction closure), but only on Splunk reachability
+		{url: "http://localhost:8083/__gtg", expectedStatus: http.StatusOK, expectedHealth: false, errorIsExp: false},
 	}
 
 	for _, test := range tests {
