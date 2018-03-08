@@ -140,13 +140,12 @@ func TestDetermineHealth_200(t *testing.T) {
 	defer healthcheckerServer.Close()
 
 	res := determineHealth(healthcheckerServer.URL, 2, "anyType", "earliestTime", "latestTime")
-	assert.Equal(t, 0, len(hook.Entries))
+	assert.Equal(t, 1, len(hook.Entries))
 	assertEqual(t, healthStatus{txs, "", "Between earliestTime and latestTime", true}, res)
 }
 
 func TestMonitorPublishHealth(t *testing.T) {
 
-	hook := logger.NewTestHook("healthchecker-test")
 	txs := []transaction{
 		{
 			TransactionID: "tid1",
@@ -181,7 +180,6 @@ func TestMonitorPublishHealth(t *testing.T) {
 	quit <- true
 
 	assertEqual(t, service.getHealthStatus().(healthStatus), healthStatus{txs, "", fmt.Sprintf("Between %s and %s", earliestTime, latestTime), true})
-	assert.Equal(t, 0, len(hook.Entries))
 }
 
 func TestIgnoreRecentTransactions(t *testing.T) {

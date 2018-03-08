@@ -91,7 +91,7 @@ func determineHealth(eventReaderAddress string, slaWindow int, contentType strin
 	defer cleanUp(resp)
 
 	if resp.StatusCode != http.StatusOK {
-		logger.WithError(err).Errorf("Failed to retrieve transactions from %s with status code %s", req.URL.String(), resp.StatusCode)
+		logger.WithError(err).Errorf("Failed to retrieve transactions from %s with status code %d", req.URL.String(), resp.StatusCode)
 		return healthStatus{[]transaction{}, checkingTime, checkingPeriod, false}
 	}
 
@@ -109,6 +109,14 @@ func determineHealth(eventReaderAddress string, slaWindow int, contentType strin
 
 	// ignore recent transactions that might be already closed - even if they are unclosed when the query happens
 	txs = ignoreRecentTransactions(txs, now, latestTime, slaWindow)
+
+	if len(txs) > 0 {
+		tids := []string{}
+		for _, tx := range txs {
+			tids = append(tids, tx.TransactionID)
+		}
+		logger.Errorf("Transactions %+v are unhealthy at %v.", tids, checkingTime)
+	}
 
 	return healthStatus{txs, checkingTime, checkingPeriod, true}
 }
