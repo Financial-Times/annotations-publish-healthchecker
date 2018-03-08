@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	health "github.com/Financial-Times/go-fthealth/v1_1"
+	log "github.com/Financial-Times/go-logger"
 	"github.com/Financial-Times/service-status-go/gtg"
-	"github.com/coreos/fleet/log"
 )
 
 const healthPath = "/__health"
@@ -70,7 +70,8 @@ func (service *healthService) failedTransactionsChecker() (string, error) {
 	status := service.healthchecker.getHealthStatus().(healthStatus)
 	msg := fmt.Sprintf("NO of failures: %d. Latest check at: %s", len(status.OpenTransactions), status.LastTimeCheck)
 	if len(status.OpenTransactions) >= 2 {
-		log.Infof("Unhealthy status: %+v \n", status)
+		log.Infof("Unhealthy status. The following transactions are not closed: %+v. Checked at: %v.",
+			status.OpenTransactions, status.LastTimeCheck)
 		return "", fmt.Errorf("Degradation detected. %s", msg)
 	} else {
 		return fmt.Sprintf("No degradation detected. %s", msg), nil
